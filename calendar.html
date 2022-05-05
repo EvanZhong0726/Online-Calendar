@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Monthly Calendar</title>
+        <link rel="styleSheet" href="calendar.css">
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/3.5.0/jquery.min.js" ></script>
+        <script>
+            //check if user is already logged in, so refresh doesn't log the user out
+            function refresh(event){
+                fetch('refresh.php', {
+                    method: 'Post',
+                    headers: { 'content-type': 'application/json' } 
+                })
+                .then(response=>response.json())
+                .then(function(data){
+                    if(data.success){
+                        $(".token").val(data.token);
+                        //update the welcome header
+                        document.getElementsByClassName("welcome")[0].textContent="Hi, "+data.username+"! Welcome to your calendar!";
+                        //show user's calendar
+                        thisMonthCalendar();
+                        //disable register and login buttons
+                        document.getElementById("login").disabled=true;
+                        document.getElementById("register").disabled=true;  
+                    }
+                })
+                .catch(err=>alert(err));
+            }
+            //log in the user
+            function login(event){
+                //retrieve form variables
+                const username=document.getElementById("username").value;
+                const password=document.getElementById("password").value;
+                const data={"username":username,"password":password};
+                //fetch login php
+                fetch('login.php', {
+                method: 'POST',
+                body: JSON.stringify(data),
+                headers: { 'content-type': 'application/json' }
+                })
+                .then(response => response.json())
+                .then(function(data){
+                    if(!data.success){
+                        alert(data.message);
+                    }
+                    return data; 
+                })
+                .then(function(data){
+                    if(data.success){
+                        //update header
+                        document.getElementsByClassName("welcome")[0].textContent="Hi, "+username+"! Welcome to your calendar!";
+                        //call user's this month calendar
+                        thisMonthCalendar();
+                        //reset the login form
+                        $("#LOGIN")[0].reset();
+                        $(".token").val(data.token);
+                        //disable login and register buttons
+                        document.getElementById("login").disabled=true;
+                        document.getElementById("register").disabled=true;
+                    }
+                })
+                .catch(err => alert(err));
+            }
+            //register a new user
+            function register(event){
+                //retrieve form variables
+                const username=document.getElementById("register_username").value;
+                const password1=document.getElementById("register_password1").value;
+                const password2=document.getElementById("register_password2").value;
+                const data={"username":username,"password1":password1,"password2":password2};
+                //fetch register.php
+                fetch('register.php',{
+                method: 'POST',
+                body: JSON.stringify(data),
+                headers: {'content-type':'application/json'}
+                })
+                .then(response=>response.json())
+                .then(function(data){
+                    if(!data.success){
+                        alert(data.message);
+                    }
+                    if(data.success){
+                        //reset the register form
+                        $("#REGISTER")[0].reset();
+                        
+                        const logindata={username:username,  password:password1};
+                        //automatically log the user in
+                        fetch('login.php',{
+                            method: 'POST',
+                            body: JSON.stringify(logindata),
+                            headers: {'content-type':'application/json'}
+                        })
+                        .then(response1=>response1.json())
+                        .then(function(data1){
+                            if(!data1.success){
+                                alert(data1.message);
+                            }
+                            else{
+                                $(".token").val(data1.token);
+                            }
+                        })
+                        .then(function(){
+                            document.getElementsByClassName("welcome")[0].textContent="Hi, "+username+"! Welcome to your calendar!";
+                            thisMonthCalendar();
+                            document.getElementById("login").disabled=true;
+                            document.getElementById("register").disabled=true; 
+                        })
+                        .catch(err=>alert(err));
+                
+                    }
+                })
+                .catch(err=>alert(err));
+            }
+            //a helper function to update the month and year information of the calendar
+            function month(){
+                const month = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+                const day=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+                const d = new Date();
+                const thismonth = month[d.getMonth()];
+                const thisday=day[d.getDay()];
+                const thisdate=d.getDate();
+                const thisyear=d.getFullYear();
+                document.getElementById("month").textContent+=thisday+" "+thismonth+" "+thisdate+" "+thisyear;
+            }
+            //a helper function to show the calendar of current month
+            function thisMonthCalendar(event){
+                const d=new Date();
+                calendar(d);
+            }
+            //go to the previous month
+            function decrementMonthCalendar(date){
+                const d=date;
+                const month=d.getMonth()+1;
+                const year=d.getFullYear();
+                let prevMonth=month-1;
+                let prevYear=year;
+                if(month==1){
+                    prevMonth=12;
+                    prevYear=prevYear-1;
+                }
+                const dateString=prevMonth+"/01/"+prevYear;
+                const newDate=new Date(dateString);
+                calendar(newDate);
+            }
+            //go to the next month
+            function incrementMonthCalendar(date){
+                const d=date;
+                const month=d.getMonth()+1;
+                const year=d.getFullYear();
+                let postMonth=month+1;
+                let postYear=year;
+                if(month==12){
+                    postMonth=1;
+                    postYear=postYear+1;
+                }
+                const dateString=postMonth+"/01/"+postYear;
+                const newDate=new Date(dateString);
+                calendar(newDate);
+            }
+            //the main calendar function
+            function calendar(date){
+                const month = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+                const d=date;
+                const thisDate=d.getDate();
+                const thisDay=d.getDay();
+                const thisMonthString=month[d.getMonth()];
+                const thisMonth=d.getMonth()+1;
+                let nextMonthString="";
+                if(thisMonth==12){
+                    nextMonthString="Jan";
+                }
+                else{
+                    nextMonthString=month[thisMonth];
+                }
+                const thisYear=d.getFullYear();
+                //change the month indicator of the calendar
+                document.getElementsByClassName("month_indicator")[0].innerHTML='<a class="leftarrow"></a>';
+                document.getElementsByClassName("month_indicator")[0].innerHTML+='<strong class="month_index">'+thisMonthString+" "+thisYear+"</strong>";
+                document.getElementsByClassName("month_indicator")[0].innerHTML+='<a class="rightarrow"></a>'; 
+                const startMonth=thisMonth+"/"+"01"+"/"+thisYear;
+                //get the month ending date, as it varies across months
+                let thisMonthEndVal=-1;
+                if(thisMonth==2 && thisYear%4==0){
+                    thisMonthEndVal=29;
+                }
+                else if (thisMonth==2 && thisYear%4!=0){
+                    thisMonthEndVal=28;
+                }
+                else if(thisMonth==1 || thisMonth==3 || thisMonth==5 || thisMonth==7 || thisMonth==8 || thisMonth==10 || thisMonth==12){
+                    thisMonthEndVal=31;
+                }
+                else{
+                    thisMonthEndVal=30;
+                }
+                const endMonth=thisMonth+"/"+thisMonthEndVal+"/"+thisYear;
+                const monthStart=new Date(startMonth);
+                const monthEnd=new Date(endMonth);
+                const monthStartDay=monthStart.getDay();
+                let prevMonth=thisMonth-1;
+                let prevMonthYear=thisYear;
+                //get the previous month ending date
+                if(thisMonth==1){
+                    prevMonth=12;
+                    prevMonthYear=prevMonthYear-1;
+                }
+                let prevMonthEndVal=-1;
+                if(prevMonth==2 && prevMonthYear%4==0){
+                    prevMonthEndVal=29;
+                }
+                else if (prevMonth==2 && prevMonthYear%4!=0){
+                    prevMonthEndVal=28;
+                }
+                else if(prevMonth==1 || prevMonth==3 || prevMonth==5 || prevMonth==7 || prevMonth==8 || prevMonth==10 || prevMonth==12){
+                    prevMonthEndVal=31;
+                }
+                else{
+                    prevMonthEndVal=30;
+                } 
+                //get the first date of the previous month that can also been shown in the current month's calendar
+                let startDate=prevMonthEndVal-monthStartDay+2;
+                if(monthStartDay==0){
+                    startDate=prevMonthEndVal-5;
+                }
+                let i=startDate;
+                //clear the date grid everytime the calendar function is called
+                document.getElementsByClassName("date_grid")[0].innerHTML="";
+                //add the dates of previous month that can be shown in the current month's calendar
+                while (i<=prevMonthEndVal){
+                    const htmlString="<div class='prevMonthDates'><div class='monthDates'>"+i+"</div></div>";
+                    document.getElementsByClassName("date_grid")[0].innerHTML+=htmlString;
+                    i=i+1;
+                }
+                let j=1;
+                //add the dates of the current month
+                while (j<=thisMonthEndVal){
+                    let htmlString="";
+                    if(j!=1){
+                    htmlString="<div class='thisMonthDates' ><div class='monthDates' id="+j+"><div class='dates'>"+j+"</div></div></div>";}
+                    else{
+                    htmlString="<div class='thisMonthDates' ><div class='monthDates'id="+j+"><div class='dates'>"+thisMonthString+" "+j+"</div></div></div>";
+                    }
+                    document.getElementsByClassName("date_grid")[0].innerHTML+=htmlString;
+                    j=j+1;
+                }
+                //add the dates of the next month that can also be shown in this month's calendar
+                let tillNextMonth=7-monthEnd.getDay();
+                if(tillNextMonth==7){
+                    tillNextMonth=0;
+                }
+                let k=1;
+                while (k<=tillNextMonth){
+                    let htmlString="";
+                    if(k!=1){
+                    htmlString="<div class='nextMonthDates'><div class='monthDates'>"+k+"</div></div>";}
+                    else{
+                    htmlString="<div class='nextMonthDates'><div class='monthDates'>"+nextMonthString+" "+k+"</div></div>";
+                    }
+                    document.getElementsByClassName("date_grid")[0].innerHTML+=htmlString;
+                    k=k+1;
+                }
+                //update the css of the dates in calendar
+                $(".thisMonthDates").css("font-size","1.5em");
+                $(".thisMonthDates").css("color","grey");
+                $(".thisMonthDates").css("font-weight","500");
+                $(".thisMonthDates").css("letter-spacing: 0.1em");
+                $(".thisMonthDates").css("font-variant","small-caps");
+                $(".thisMonthDates").css("text-align","center");
+                $(".thisMonthDates").css("height","150px");
+                $(".thisMonthDates").css("border-color","lightgrey");
+                $(".prevMonthDates").css("font-size","1.5em");
+                $(".prevMonthDates").css("color","grey");
+                $(".prevMonthDates").css("font-weight","500");
+                $(".prevMonthDates").css("letter-spacing: 0.1em");
+                $(".prevMonthDates").css("font-variant","small-caps");
+                $(".prevMonthDates").css("text-align","center");
+                $(".prevMonthDates").css("height","150px");
+                $(".prevMonthDates").css("border-color","lightgrey");
+                $(".nextMonthDates").css("font-size","1.5em");
+                $(".nextMonthDates").css("color","grey");
+                $(".nextMonthDates").css("font-weight","500");
+                $(".nextMonthDates").css("letter-spacing: 0.1em");
+                $(".nextMonthDates").css("font-variant","small-caps");
+                $(".nextMonthDates").css("text-align","center");
+                $(".nextMonthDates").css("height","150px");
+                $(".nextMonthDates").css("border-color","lightgrey");
+               //creating arrows that can be clicked to go to either to the last or the next month
+                $(".leftarrow").click(function(){
+                    decrementMonthCalendar(d);
+                    event.stopPropagation;
+
+                })
+                $(".rightarrow").click(function(){
+                    incrementMonthCalendar(d);
+                    event.stopPropagation;
+                });
+               //if the user is logged in
+                if(document.getElementsByClassName("welcome")[0].textContent!="Hi! Welcome to your calendar!"){
+                    //show the signout button
+                    $("#signout").show();
+                    $("#signoutLogo").off("click").on("click",function(){
+                        //if the signout button is clicked
+                        //fetch the logout php
+                        fetch("logout.php",{
+                            method: "POST",
+                            headers: {'content-type':'application/json'}
+                        })
+                        .then(response=>response.json())
+                        .then(function(data){
+                            //reset to default
+                            document.getElementsByClassName("welcome")[0].textContent="Hi! Welcome to your calendar!";
+                            thisMonthCalendar();
+                            $("#signout").hide();
+                            document.getElementById("login").disabled=false;
+                            document.getElementById("register").disabled=false;
+                            document.getElementById("LOGIN").reset();
+                            document.getElementById("REGISTER").reset();  
+                           
+                        })
+                        .catch(err=>alert(err));
+                       
+
+                    });
+                    //create month and year variables that can be called 
+                    const monthEnums=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                    const monthYear=document.getElementsByClassName("month_index")[0].textContent;
+                    const monthString=monthYear.split(' ')[0];
+                    const year=monthYear.split(' ')[1];
+                    const month=monthEnums.indexOf(monthString)+1;
+                    //distinguish single and double click behaviors
+                    var timer = 0;
+                    var delay = 200;
+                    var prevent = false;
+                    $(".thisMonthDates").on("click", function() {
+                        const clickedDate=$(this).children(".monthDates").attr('id');
+                        timer = setTimeout(function() {
+                        if (!prevent) {
+                            singleClickAction(clickedDate);
+                        }
+                        prevent = false;
+                        }, delay);
+                    })
+                    .on("dblclick", function() {
+                        const clickedDate=$(this).children(".monthDates").attr('id');
+                        clearTimeout(timer);
+                        prevent = true;
+                        doubleClickAction(clickedDate);
+                    });
+                    //a double click on a date of the current month will show that date's schedule
+                    function doubleClickAction(clickedDate){
+                        $(".schedule").show();
+                        const clickedMonthYear=document.getElementsByClassName("month_index")[0].textContent;
+                        const dateString=clickedMonthYear.split(" ")[0]+" "+clickedDate+" "+clickedMonthYear.split(" ")[1];
+                        document.getElementById("scheduleDateText").textContent=dateString;
+                        const actualDateString=year+"/"+month+"/"+clickedDate;
+                        const data={date: actualDateString};
+                        //fetch showevent
+                        fetch("showEvent.php",{
+                            method: "POST",
+                            body: JSON.stringify(data),
+                            headers: {'content-type':'application/json'}
+                        })
+                        .then(response=>response.json())
+                        .then(function(data){
+                            if(!data.success){
+                                alert(data.message);
+                            }
+                            return data;
+                        })
+                        .then(function(data){
+                            //clear all the time blocks of the schedule 
+                            $(".thisHourBlock").empty(); 
+                            //iterate through today's event and display them on the grid   
+                            for(let j=0;j<Object.keys(data.events).length;j++){
+                                const event=data.events[j];
+                                const eventStartTime=time(data.startTimes[j]);
+                                const eventEndTime=time(data.endTimes[j]);
+                                const eventStartTimeToDate=new Date(data.startTimes[j]);
+                                const eventEndTimeToDate=new Date(data.endTimes[j]);
+                                const duration=(Math.abs(eventStartTimeToDate-eventEndTimeToDate)/3600000).toFixed(2);
+                                //top and height variables are used for correctly positioning the events
+                                const top=eventStartTimeToDate.getMinutes()/60*100;
+                                const height=(duration)*100;
+                                const schedulehtmlString="<div style='height:"+height+"px; border-top: 2px solid aliceblue; border-bottom: 2px solid aliceblue; position:absolute; Z-index:100; top:"+top+"%; padding-left: 10px; width:290px; color: aliceblue; font-family: Arial, Helvetica, sans-serif; font-size: 0.75em; background-color: rgb(150,221,234);'>"+event+"<div style='font-size:0.5em;'>"+eventStartTime+" - "+eventEndTime+"</div></div>"
+                                const elementIDString="hour:"+eventStartTime.split(' ')[0].split(':')[0]+":"+eventStartTime.split(' ')[1];
+                                document.getElementById(elementIDString).innerHTML+=schedulehtmlString;
+                            }
+                        })
+                        .catch(err=>alert(err));
+                    }
+                    //hide the schedule if the close button is clicked
+                    $("#closeButton3").off("click").on("click",function(){
+                        $(".schedule").hide();
+                    });
+                    // a single click on a date of the current month will allow user to add an event
+                    function singleClickAction(clickedDate){
+                        //show the addEvent form
+                        $(".addEventForm").show();
+                        const date=clickedDate;
+                        //if the close button is clicked, hide and reset the forms
+                        $("#closeButton1").off('click').on("click",function(){
+                            $("#addEventForm").hide();
+                            $("#addEventForm")[0].reset();
+                        })
+                        //if the add button is clicked
+                        $("#addButton").off('click').on("click",function(){
+                            //retrieve form variables
+                            const event=document.getElementById("event").value;
+                            const startTime=document.getElementById("from").value;
+                            const endTime=document.getElementById("to").value;
+                            const eventDate=year+"/"+month+"/"+date;
+                            const data={event: event, startTime: startTime, endTime: endTime, eventDate: eventDate, token: $(".token").val()};
+                            //fetch addEvent 
+                            fetch('addEvent.php', {
+                                    method: 'POST',
+                                    body: JSON.stringify(data),
+                                    headers: { 'content-type': 'application/json' }
+                            })
+                            .then(response=>response.json())
+                            .then(function(data){
+                                if(data.success){
+                                    //display the new calendar, hide and reset the form
+                                    calendar(d); 
+                                    $("#addEventForm").hide();
+                                    $('#addEventTrueForm')[0].reset();
+                                }
+                                else{
+                                    alert(data.message);
+                                }
+                            })
+                            .catch(err=>alert(err));
+                            event.stopPropagation;     
+                        })}
+                        //for every date of the current month, show the events
+                    for(let i=1;i<=thisMonthEndVal;i++){
+                        const dateString=year+"/"+month+"/"+i;
+                        const data={date: dateString};
+                        //fetch showevent
+                        fetch('showEvent.php',{
+                            method: 'POST',
+                            body: JSON.stringify(data),
+                            headers: {'content-type':'application/json'}
+                        })
+                        .then(response=>response.json())
+                        .then(function(data){
+                            if(!data.success){
+                                alert(data.message);
+                            } 
+                            return data;
+                        })
+                        .then(function(data){
+                            for(let j=0;j<Object.keys(data.events).length;j++){
+                                const eventStartTime=time(data.startTimes[j]);
+                                const id=i;
+                                //show events in a time ascending order
+                                //only four events are shown in a single grid
+                                if(j<4){
+                                if (j==0){
+                                    const innerhtmlString="<div class='events' id=eventID:"+data.eventIDs[j]+"><div class='events1' style='height:22px; width:194px; font-size: 15px; background-color: rgb(240,255,247); color: grey; text-align:center-10px; font-family: Arial Narrow, sans-serif'>"+eventStartTime+" "+data.events[j]+"</div></div>";
+                                    document.getElementById(id).innerHTML+=innerhtmlString;
+                                }
+                               if(j==1){
+                                    const innerhtmlString="<div class='events' id=eventID:"+data.eventIDs[j]+"><div class='events2' style='height:22px; width:194px; font-size: 15px; background-color: rgb(255,240,248);  color: grey; text-align:center-10px; font-family: Arial Narrow, sans-serif' >"+eventStartTime+" "+data.events[j]+"</div></div>";
+                                    document.getElementById(id).innerHTML+=innerhtmlString;
+                                }
+                                if(j==2){
+                                    const innerhtmlString="<div class='events' id=eventID:"+data.eventIDs[j]+"><div class='events3' style='height:22px; width:194px; font-size: 15px; background-color: rgb(255,247,240);  color: grey; text-align:center-10px; font-family: Arial Narrow, sans-serif' >"+eventStartTime+" "+data.events[j]+"</div></div>";
+                                    document.getElementById(id).innerHTML+=innerhtmlString;
+                                }
+                                if(j==3){
+                                    const innerhtmlString="<div class='events' id=eventID:"+data.eventIDs[j]+"><div class='events4' style='height:22px; width:194px; font-size: 15px; background-color: rgb(240,241,255);  color: grey; text-align:center-10px; font-family: Arial Narrow, sans-serif' >"+eventStartTime+" "+data.events[j]+"</div></div>";
+                                    document.getElementById(id).innerHTML+=innerhtmlString;
+                                }
+                                }
+                                else{
+                                    if (j%4==0){
+                                        const innerhtmlString="<div class='events' id=eventID:"+data.eventIDs[j]+"><div class='eventsmore1' style='Z-index:10; position: relative; height:22px; width:194px; font-size: 15px; background-color: rgb(240,255,247); color: grey; text-align:center-10px; font-family: Arial Narrow, sans-serif'>"+eventStartTime+" "+data.events[j]+"</div></div>";
+                                        document.getElementById(id).innerHTML+=innerhtmlString;
+                                    }
+                                    if(j%4==1){
+                                        const innerhtmlString="<div class='events' id=eventID:"+data.eventIDs[j]+"><div class='eventsmore2' style='Z-index:10; position: relative;  height:22px; width:194px; font-size: 15px; background-color: rgb(255,240,248);  color: grey; text-align:center-10px; font-family: Arial Narrow, sans-serif' >"+eventStartTime+" "+data.events[j]+"</div></div>";
+                                        document.getElementById(id).innerHTML+=innerhtmlString;
+                                    }
+                                    if(j%4==2){
+                                        const innerhtmlString="<div class='events' id=eventID:"+data.eventIDs[j]+"><div class='eventsmore3' style='Z-index:10; position: relative; height:22px; width:194px; font-size: 15px; background-color: rgb(255,247,240);  color: grey; text-align:center-10px; font-family: Arial Narrow, sans-serif' >"+eventStartTime+" "+data.events[j]+"</div></div>";
+                                        document.getElementById(id).innerHTML+=innerhtmlString;
+                                    }
+                                    if(j%4==3){
+                                        const innerhtmlString="<div class='events' id=eventID:"+data.eventIDs[j]+"><div class='eventsmore4' style='Z-index:10; position: relative; height:22px; width:194px; font-size: 15px; background-color: rgb(240,241,255);  color: grey; text-align:center-10px; font-family: Arial Narrow, sans-serif' >"+eventStartTime+" "+data.events[j]+"</div></div>";
+                                        document.getElementById(id).innerHTML+=innerhtmlString;
+                                    }  
+                                }
+                                
+                            }
+                            if(Object.keys(data.events).length>4){
+                                //to see all the events, user can click on the more button
+                                const more=Object.keys(data.events).length-4;
+                                const innerhtmlString="<div class='more' style='font-size:15px; Z-index:10; position: relative; font-family: Arial, sans-serif'id=more:"+i+">"+more+" more</div>";
+                                document.getElementById(i).innerHTML+=innerhtmlString;
+                                // user can click up to return to default
+                                const upinnerhtmlString="<div class='up' style='Z-index:10; position:relative;font-size:15px; font-family: Arial, sans-serif'id=up:"+i+">up</div>";
+                                document.getElementById(i).innerHTML+=upinnerhtmlString;              
+                            };
+                            //create hover effects 
+                            $(".more").hover(function(){
+                                $(this).css("background-color","lightgrey");
+                                $(this).parent().css("background-color","aliceblue");
+                                 },function(){
+                                $(this).css("background-color","aliceblue");
+                            });
+                            $(".up").hover(function(){
+                                $(this).css("background-color","lightgrey");
+                                $(this).parent().css("background-color","aliceblue");
+                                },function(){
+                                $(this).css("background-color","aliceblue");
+                            });
+                            $(".events1").hover(function(){
+                                $(this).css("background-color","lightgrey");
+                               
+                            },function(){
+                                $(this).css("background-color","rgb(240,255,247)");
+                            });
+                            $(".events2").hover(function(){
+                                $(this).css("background-color","lightgrey");
+                               
+                            },function(){
+                                $(this).css("background-color","rgb(255,240,248)");
+                            });
+                            $(".events3").hover(function(){
+                                $(this).css("background-color","lightgrey");
+                               
+                            },function(){
+                                $(this).css("background-color","rgb(255,247,240)");
+                            });
+                            $(".events4").hover(function(){
+                                $(this).css("background-color","lightgrey");
+                            },function(){
+                                $(this).css("background-color","rgb(240,241,255)");
+                            });
+                            $(".eventsmore1").hover(function(){
+                                $(this).css("background-color","lightgrey");
+                            },function(){
+                                $(this).css("background-color","rgb(240,255,247)");
+                            });
+                            $(".eventsmore2").hover(function(){
+                                $(this).css("background-color","lightgrey");
+                            },function(){
+                                $(this).css("background-color","rgb(255,240,248)");
+                            });
+                            $(".eventsmore3").hover(function(){
+                                $(this).css("background-color","lightgrey");
+                            },function(){
+                                $(this).css("background-color","rgb(255,247,240)");
+                            });
+                            $(".eventsmore4").hover(function(){
+                                $(this).css("background-color","lightgrey");
+                            },function(){
+                                $(this).css("background-color","rgb(240,241,255)");
+                            });
+                            //hide the extra events first
+                            $(".eventsmore1").hide();
+                            $(".eventsmore2").hide();
+                            $(".eventsmore3").hide();
+                            $(".eventsmore4").hide();
+                            $(".up").hide();
+                            //if more is clicked, show the extra events
+                            $(".more").off("click").on("click",function(){
+                                $(this).hide();
+                                 event.stopPropagation();
+                                 $(this).siblings(".events").children(".eventsmore1").show();
+                                 $(this).siblings(".events").children(".eventsmore2").show();
+                                 $(this).siblings(".events").children(".eventsmore3").show();
+                                 $(this).siblings(".events").children(".eventsmore4").show();
+                                 $(this).siblings(".up").show();
+                            });
+                            //if up is clicked, hide the extra events
+                            $(".up").off("click").on("click",function(){
+                                 event.stopPropagation();
+                                 $(this).siblings(".events").children(".eventsmore1").hide();
+                                 $(this).siblings(".events").children(".eventsmore2").hide();
+                                 $(this).siblings(".events").children(".eventsmore3").hide();
+                                 $(this).siblings(".events").children(".eventsmore4").hide();
+                                 $(this).hide(); 
+                                 $(this).siblings(".more").show();
+                            })
+                            $(".dates").hover(function(){
+                            $(this).css("background-color","lightgrey");
+                            },function(){
+                            $(this).css("background-color","aliceblue");
+                            })
+                            //show the event information if it's clicked
+                            $(".events").off("click").on("click",function(event){
+                                event.stopPropagation();
+                                //get the date
+                                const id=$(this).attr('id').split(':')[1];
+                                data={eventID:id};
+                                //fetch display event
+                                fetch('displayEvent.php',{
+                                    method: 'POST',
+                                    body: JSON.stringify(data),
+                                    headers: {'content-type':'application/json'}
+                                })
+                                .then(response=>response.json())
+                                .then(function(data){
+                                    if(!data.success){
+                                        alert(data.message);
+                                    } 
+                                    return data;
+                                })
+                                .then(function(data){
+                                    //update the form elements
+                                    const eventName=data.event;
+                                    const eventStart=time(data.startTime);
+                                    const eventEnd=time(data.endTime);
+                                    const eventYear=data.startTime.split(' ')[0].split('-')[0];
+                                    const eventMonth=monthEnums[(data.startTime.split(' ')[0].split('-')[1]-1)%12];
+                                    const eventDay=data.startTime.split(' ')[0].split('-')[2];
+                                    document.getElementsByClassName("displayEvent")[0].getElementsByTagName("strong")[0].textContent="Event: ";
+                                    document.getElementsByClassName("displayEvent")[0].getElementsByTagName("strong")[0].textContent+=eventName;
+                                    document.getElementsByClassName("displayEvent")[0].getElementsByClassName("eventDate")[0].textContent=eventMonth+" "+eventDay+" "+eventYear;
+                                    document.getElementsByClassName("displayEvent")[0].getElementsByClassName("eventFrom")[0].textContent=" "+eventStart;
+                                    document.getElementsByClassName("displayEvent")[0].getElementsByClassName("eventTo")[0].textContent=" "+eventEnd;
+                                    return data;
+                                })
+                                .then(function(data){
+                                    //update form css
+                                    $("#displayEvent").show();
+                                    $("#displayEvent").css("height", "125px");
+                                    $("#displayEvent").css("width","150px");
+                                    $("#displayEvent").css("background-color","aliceblue");
+                                    $("#displayEvent").css("border","5px");
+                                    $("#displayEvent").css("border-color","rgb(0,65,122)");
+                                    $("#displayEvent").css("border-style","solid");
+                                    $("#displayEvent").css("position","absolute");
+                                    $("#displayEvent").css("top","50%");
+                                    $("#displayEvent").css("left","40%");
+                                    $("#displayEvent").css("padding","20px");
+                                    //if the close button is clicked, close the form
+                                    $("#closeButton").off("click").on("click",function(){
+                                        $("#displayEvent").hide();
+                                    })
+                                    return data;
+                                })
+                                .then(function(data){
+                                    //delete the event if delete is clicked
+                                    $("#deleteButton").off("click").on("click",function(){
+                                        $("#displayEvent").hide();
+                                        const deleteData={eventID:id,token:$(".token").val()};
+                                        //fetch delete
+                                        fetch('deleteEvent.php',{
+                                            method: 'POST',
+                                            body: JSON.stringify(deleteData),
+                                            headers: {'content-type':'application/json'}
+                                        })
+                                        .then(response=>response.json())
+                                        .then(function(result){
+                                            if(!result.success){
+                                                alert(result.message);
+                                            }
+                                            else{
+                                                calendar(date);
+
+                                            }
+                                        })
+                                        .catch(err=>alert(err));    
+                                    })
+                                    //edit events if edit is clicked      
+                                    $("#editButton").off("click").on("click",function(){
+                                        $("#displayEvent").hide();
+                                        const editNameOriginal=data.event;
+                                        const editNameOriginalStart=time(data.startTime).split(' ')[0]+time(data.startTime).split(' ')[1];
+                                        const editNameOriginalEnd=time(data.endTime).split(' ')[0]+time(data.endTime).split(' ')[1];
+                                        const editNameOriginalDate=data.startTime.split(' ')[0];
+                                        document.getElementById("editfrom").value=editNameOriginalStart;
+                                        document.getElementById("editto").value=editNameOriginalEnd;
+                                        document.getElementById("editEventDate").value=editNameOriginalDate;
+                                        document.getElementById("editEventName").value=editNameOriginal;
+                                        //show the edit event form
+                                        $("#editEvent").show();
+                                        $("#closeButton2").off("click").on("click",function(){
+                                        $("#editEvent").hide();
+                                        })
+                                        $("#submitEditEvent").off("click").on("click",function(){
+                                            //retrieve form variables
+                                            const editNewEventName=document.getElementById("editEventName").value;
+                                            const editNewEventStart=document.getElementById("editfrom").value;
+                                            const editNewEventEnd=document.getElementById("editto").value;
+                                            const editNewEventDate=document.getElementById("editEventDate").value;
+                                            const editData={event: editNewEventName, eventStartTime: editNewEventStart, eventEndTime: editNewEventEnd, eventDate: editNewEventDate, eventID:id, token:$(".token").val()};
+                                            //edit the event
+                                            fetch('editEvent.php',{
+                                            method: 'POST',
+                                            body: JSON.stringify(editData),
+                                            headers: {'content-type':'application/json'}
+                                            })
+                                            .then(response=>response.json())
+                                            .then(function(result){
+                                                if(!result.success){
+                                                    alert(result.message);
+                                                }
+                                                else{
+                                                    //go to the calendar associated with the edited event's new date
+                                                    const editNewEventDaterearrange=editNewEventDate.split("-")[1]+"-"+editNewEventDate.split("-")[2]+"-"+editNewEventDate.split("-")[0];
+                                                    const newDate=new Date(editNewEventDaterearrange);
+                                                    calendar(newDate);
+                                                    //hide the edit event form
+                                                    $("#editEvent").hide();
+                                                }
+                                            })
+                                            .catch(err=>alert(err)); 
+                                        })
+                                
+                                    })
+                                })
+                                .catch(err=>alert(err));
+                            })
+                        })
+                        .catch(err=>alert(err));  
+                    }
+                   
+
+                }
+            //helper function to convert sql datetime to a time string
+            function time(data){
+                let eventStartTimeHour=data.split(' ')[1].split(':')[0];
+                const eventStartTimeAMPM= (eventStartTimeHour/12<1) ? "am" : "pm";
+                eventStartTimeHour=(eventStartTimeHour%12==0)? 12: eventStartTimeHour%12;
+                const eventStartTimeMinutes=data.split(' ')[1].split(':')[1];
+                const eventStartTime=eventStartTimeHour+":"+eventStartTimeMinutes+" "+eventStartTimeAMPM;
+                return eventStartTime;
+            }
+
+
+                
+
+            }
+        </script>
+    </head>
+    <body>
+        <h1>
+            <img class="calendarLogo" src="calendar.webp" alt="calendar logo"/> 
+            <strong class="welcome">Hi! Welcome to your calendar!</strong>
+        </h1>
+        <div class="user">
+        Login:<br>
+        <form method="post" id="LOGIN">
+            Username:
+            <input type="text" name="username" id="username" placeholder="username">
+            &nbsp;
+            Password:
+            <input type="password" name="password" id="password" placeholder="password">
+            &nbsp;
+            <input type="button" name="login" value="login" id="login">
+        </form>
+        <br><br>Register:<br>
+        <form method="post" id="REGISTER">
+            Username:
+            <input type="text" name="register_username" id="register_username" placeholder="username">
+            &nbsp;
+            Password:
+            <input type="password" name="register_password1" id="register_password1" placeholder="password">
+            &nbsp;
+            Retype your password:
+            <input type="password" name="register_password2" id="register_password2" placeholder="password">
+            &nbsp;
+            <input type="button" name="register" value="register" id="register">
+        </form>
+        <br><br>
+        <div id="signout">
+            <img id="signoutLogo" width="40" height="40" src="logout.png" alt="logout logo"/>
+            <br>
+            <strong class="signouttext">Sign Out</strong>
+        </div>
+        </div>
+            <br>
+            <br>
+            <strong id="month">Today: </strong>
+            <br>
+            <br>
+            <div class="calendar">
+                <div class="month_indicator">
+                </div>
+                <div class="day_indicator">
+                    <div class="day">Mon</div>
+                    <div class="day">Tue</div>
+                    <div class="day">Wed</div>
+                    <div class="day">Thu</div>
+                    <div class="day">Fri</div>
+                    <div class="day">Sat</div>
+                    <div class="day">Sun</div>
+                </div>
+                <div class="date_grid">
+                       
+                </div>
+                <div class="addEventForm" id="addEventForm">
+                    <form method="post" id="addEventTrueForm">
+                    <div class="eventName">     Event name:
+                         <input type="text" id="event" placeholder="add title">
+                         <input type="hidden" class="token">
+                    </div>
+                    <br><br>
+                    Event time: From:
+                    <select name="from" id="from" >
+                       
+                    </select>
+                              &nbsp; To:
+                    <select name="to" id="to">
+
+                    </select>
+                   </form>
+                    <script>
+                        //just adding the time options for the select elements
+                         document.getElementById("from").innerHTML+="<option value=12:00am>12:00am</option>"
+                         document.getElementById("from").innerHTML+="<option value=12:15am>12:15am</option>"
+                         document.getElementById("from").innerHTML+="<option value=12:30am>12:30am</option>"
+                         document.getElementById("from").innerHTML+="<option value=12:45am>12:45am</option>"
+                        for(let i=1;i<=11;i++){
+                            for(let j=0;j<=3;j++){
+                                let timeString=i+":"+15*j;
+                                if(j==0){
+                                    timeString=timeString+"0am";
+                                }
+                                else{
+                                    timeString=timeString+"am";
+                                }
+                                if(i==10 && j==0){
+                                 document.getElementById("from").innerHTML+="<option value="+timeString+" selected='selected'>"+timeString+"</option>";
+                                }
+                                else{
+                                    document.getElementById("from").innerHTML+="<option value="+timeString+">"+timeString+"</option>"; 
+                                }
+                            }
+                        }
+                        document.getElementById("from").innerHTML+="<option value=12:00pm>12:00pm</option>"
+                        document.getElementById("from").innerHTML+="<option value=12:15pm>12:15pm</option>"
+                        document.getElementById("from").innerHTML+="<option value=12:30pm>12:30pm</option>"
+                        document.getElementById("from").innerHTML+="<option value=12:45pm>12:45pm</option>"
+                        for(let i=1;i<=11;i++){
+                            for(let j=0;j<=3;j++){
+                                let timeString=i+":"+15*j;
+                                if(j==0){
+                                    timeString=timeString+"0pm";
+                                }
+                                else{
+                                    timeString=timeString+"pm";
+                                }
+                                document.getElementById("from").innerHTML+="<option value="+timeString+">"+timeString+"</option>";    
+                            }
+                        }
+                        document.getElementById("to").innerHTML+="<option value=12:00am>12:00am</option>"
+                        document.getElementById("to").innerHTML+="<option value=12:15am>12:15am</option>"
+                        document.getElementById("to").innerHTML+="<option value=12:30am>12:30am</option>"
+                        document.getElementById("to").innerHTML+="<option value=12:45am>12:45am</option>"
+                        for(let i=1;i<=11;i++){
+                            for(let j=0;j<=3;j++){
+                                let timeString=i+":"+15*j;
+                                if(j==0){
+                                    timeString=timeString+"0am";
+                                }
+                                else{
+                                    timeString=timeString+"am";
+                                }
+                                if(i==10 && j==2){
+                                 document.getElementById("to").innerHTML+="<option value="+timeString+" selected='selected'>"+timeString+"</option>";
+                                }
+                                else{
+                                    document.getElementById("to").innerHTML+="<option value="+timeString+">"+timeString+"</option>"; 
+                                }
+                            }
+                        }
+                        document.getElementById("to").innerHTML+="<option value=12:00pm>12:00pm</option>"
+                        document.getElementById("to").innerHTML+="<option value=12:15pm>12:15pm</option>"
+                        document.getElementById("to").innerHTML+="<option value=12:30pm>12:30pm</option>"
+                        document.getElementById("to").innerHTML+="<option value=12:45pm>12:45pm</option>"
+                        for(let i=1;i<=11;i++){
+                            for(let j=0;j<=3;j++){
+                                let timeString=i+":"+15*j;
+                                if(j==0){
+                                    timeString=timeString+"0pm";
+                                }
+                                else{
+                                    timeString=timeString+"pm";
+                                }
+                                document.getElementById("to").innerHTML+="<option value="+timeString+">"+timeString+"</option>";    
+                            }
+                        }
+                    </script>
+                    <div id="closeButton1">
+                        <div class="closeButtonDiv">
+                          <div class="closeButtonDiv2"></div>
+                        </div>
+                    </div>
+                    <div id="addButton">
+                        add
+                    </div>
+                     
+                </div>
+                <div class="displayEvent" id="displayEvent">
+                    <strong>Event: </strong> <br><br>
+                    Date: <a class="eventDate"></a><br><br>
+                    From:<a class="eventFrom"></a><br>
+                    To:<a class="eventTo"></a>
+                    <div id="closeButton">
+                        <div class="closeButtonDiv">
+                          <div class="closeButtonDiv2"></div>
+                        </div>
+                    </div>
+                    <div id="editButton">
+                        edit
+                    </div>
+                    <div id="deleteButton">
+                        delete
+                    </div> 
+                </div>
+                <div class="editEvent" id="editEvent">
+                    <form method="post" id="editEventTrueForm">
+                        <div class="editName">     Event name:
+                            <input type="text" id="editEventName">
+                            <input type="hidden" class="token">
+                        </div>   
+                        <br><br>
+                        Event Date: <input type="date" id="editEventDate">
+                        <br><br>   
+                         Event time: From:
+                        <select name="from" id="editfrom">
+                           
+                        </select>
+                                  &nbsp; To:
+                        <select name="to" id="editto">
+    
+                        </select>
+                    </form>
+                        <script>
+                            //add the time options for the select elements
+                             document.getElementById("editfrom").innerHTML+="<option value=12:00am>12:00am</option>"
+                             document.getElementById("editfrom").innerHTML+="<option value=12:15am>12:15am</option>"
+                             document.getElementById("editfrom").innerHTML+="<option value=12:30am>12:30am</option>"
+                             document.getElementById("editfrom").innerHTML+="<option value=12:45am>12:45am</option>"
+                            for(let i=1;i<=11;i++){
+                                for(let j=0;j<=3;j++){
+                                    let timeString=i+":"+15*j;
+                                    if(j==0){
+                                        timeString=timeString+"0am";
+                                    }
+                                    else{
+                                        timeString=timeString+"am";
+                                    }
+                                    document.getElementById("editfrom").innerHTML+="<option value="+timeString+">"+timeString+"</option>"; 
+                                }
+                            }
+                            document.getElementById("editfrom").innerHTML+="<option value=12:00pm>12:00pm</option>"
+                            document.getElementById("editfrom").innerHTML+="<option value=12:15pm>12:15pm</option>"
+                            document.getElementById("editfrom").innerHTML+="<option value=12:30pm>12:30pm</option>"
+                            document.getElementById("editfrom").innerHTML+="<option value=12:45pm>12:45pm</option>"
+                            for(let i=1;i<=11;i++){
+                                for(let j=0;j<=3;j++){
+                                    let timeString=i+":"+15*j;
+                                    if(j==0){
+                                        timeString=timeString+"0pm";
+                                    }
+                                    else{
+                                        timeString=timeString+"pm";
+                                    }
+                                    document.getElementById("editfrom").innerHTML+="<option value="+timeString+">"+timeString+"</option>";    
+                                }
+                            }
+                            document.getElementById("editto").innerHTML+="<option value=12:00am>12:00am</option>"
+                            document.getElementById("editto").innerHTML+="<option value=12:15am>12:15am</option>"
+                            document.getElementById("editto").innerHTML+="<option value=12:30am>12:30am</option>"
+                            document.getElementById("editto").innerHTML+="<option value=12:45am>12:45am</option>"
+                            for(let i=1;i<=11;i++){
+                                for(let j=0;j<=3;j++){
+                                    let timeString=i+":"+15*j;
+                                    if(j==0){
+                                        timeString=timeString+"0am";
+                                    }
+                                    else{
+                                        timeString=timeString+"am";
+                                    }
+                                    document.getElementById("editto").innerHTML+="<option value="+timeString+">"+timeString+"</option>"; 
+                                }
+                            }
+                            document.getElementById("editto").innerHTML+="<option value=12:00pm>12:00pm</option>"
+                            document.getElementById("editto").innerHTML+="<option value=12:15pm>12:15pm</option>"
+                            document.getElementById("editto").innerHTML+="<option value=12:30pm>12:30pm</option>"
+                            document.getElementById("editto").innerHTML+="<option value=12:45pm>12:45pm</option>"
+                            for(let i=1;i<=11;i++){
+                                for(let j=0;j<=3;j++){
+                                    let timeString=i+":"+15*j;
+                                    if(j==0){
+                                        timeString=timeString+"0pm";
+                                    }
+                                    else{
+                                        timeString=timeString+"pm";
+                                    }
+                                    document.getElementById("editto").innerHTML+="<option value="+timeString+">"+timeString+"</option>";    
+                                }
+                            }
+                        </script>
+                        <div id="closeButton2">
+                            <div class="closeButtonDiv">
+                              <div class="closeButtonDiv2"></div>
+                            </div>
+                        </div>
+                        <div id="submitEditEvent">
+                            Edit
+                        </div>
+                </div>
+               
+            </div>
+            <div class="schedule">
+                <div class="schedule_content">
+                 <div class="schedule_date">
+                     <div id="scheduleDateText"></div>
+                 </div>
+                 <div id="closeButton3">
+                     <div class="closeButtonDiv">
+                         <div class="closeButtonDiv2"></div>
+                     </div>
+                 </div> 
+                 <div class="hour_indicator">
+                     <div class="hours">12am</div>
+                     <div class="hours">1am</div>
+                     <div class="hours">2am</div>
+                     <div class="hours">3am</div>
+                     <div class="hours">4am</div>
+                     <div class="hours">5am</div>
+                     <div class="hours">6am</div>
+                     <div class="hours">7am</div>
+                     <div class="hours">8am</div>
+                     <div class="hours">9am</div>
+                     <div class="hours">10am</div>
+                     <div class="hours">11am</div>
+                     <div class="hours">12pm</div>
+                     <div class="hours">1pm</div>
+                     <div class="hours">2pm</div>
+                     <div class="hours">3pm</div>
+                     <div class="hours">4pm</div>
+                     <div class="hours">5pm</div>
+                     <div class="hours">6pm</div>
+                     <div class="hours">7pm</div>
+                     <div class="hours">8pm</div>
+                     <div class="hours">9pm</div>
+                     <div class="hours">10pm</div>
+                     <div class="hours">11pm</div>
+                 </div>
+                 <div class="hour_grid">
+                     <div class="thisHourBlock" id="hour:12:am"></div>
+                     <div class="thisHourBlock" id="hour:1:am"></div>
+                     <div class="thisHourBlock" id="hour:2:am"></div>
+                     <div class="thisHourBlock" id="hour:3:am"></div>
+                     <div class="thisHourBlock" id="hour:4:am"></div>
+                     <div class="thisHourBlock" id="hour:5:am"></div>
+                     <div class="thisHourBlock" id="hour:6:am"></div>
+                     <div class="thisHourBlock" id="hour:7:am"></div>
+                     <div class="thisHourBlock" id="hour:8:am"></div>
+                     <div class="thisHourBlock" id="hour:9:am"></div>
+                     <div class="thisHourBlock" id="hour:10:am"></div>
+                     <div class="thisHourBlock" id="hour:11:am"></div>
+                     <div class="thisHourBlock" id="hour:12:pm"></div>
+                     <div class="thisHourBlock" id="hour:1:pm"></div>
+                     <div class="thisHourBlock" id="hour:2:pm"></div>
+                     <div class="thisHourBlock" id="hour:3:pm"></div>
+                     <div class="thisHourBlock" id="hour:4:pm"></div>
+                     <div class="thisHourBlock" id="hour:5:pm"></div>
+                     <div class="thisHourBlock" id="hour:6:pm"></div>
+                     <div class="thisHourBlock" id="hour:7:pm"></div>
+                     <div class="thisHourBlock" id="hour:8:pm"></div>
+                     <div class="thisHourBlock" id="hour:9:pm"></div>
+                     <div class="thisHourBlock" id="hour:10:pm"></div>
+                     <div class="thisHourBlock" id="hour:11:pm"></div>
+                 </div>
+                </div> 
+            </div>
+
+
+        <script>
+            //add the eventlisteners
+            document.getElementById("login").addEventListener("click",login,false);
+            document.getElementById("register").addEventListener("click",register,false);
+            document.addEventListener("DOMContentLoaded",month,false);
+            document.addEventListener("DOMContentLoaded",thisMonthCalendar,false);
+            document.addEventListener("DOMContentLoaded",refresh,false);
+            document.getElementById('event').style.height="20px";
+            document.getElementById('event').style.width="250px";
+            document.getElementById('event').style.fontSize="10pt";
+            //hide the forms and schedules until clicked
+            $(".schedule").hide();
+            $(".addEventForm").hide();
+            $(".displayEvent").hide();
+            $("#editEvent").hide();
+            $("#signout").hide();
+        </script>
+
+    </body>
+</html>
